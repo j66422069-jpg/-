@@ -7,7 +7,22 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const PORT = Number(process.env.PORT) || 3000;
+const isProd = process.env.NODE_ENV === "production";
+
+console.log(`[SERVER] Starting in ${isProd ? 'production' : 'development'} mode`);
+console.log(`[SERVER] Database path: ${path.join(__dirname, "portfolio.db")}`);
+
 const db = new Database("portfolio.db");
+
+// Check if database is writable
+try {
+  db.exec("CREATE TABLE IF NOT EXISTS _write_test (id INTEGER PRIMARY KEY)");
+  db.exec("DROP TABLE _write_test");
+  console.log("[SERVER] Database is writable");
+} catch (e) {
+  console.error("[SERVER] Database is NOT writable. Persistence will fail on this platform.", e);
+}
 
 try {
   // Initialize database
@@ -418,7 +433,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT} in ${isProd ? 'production' : 'development'} mode`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 

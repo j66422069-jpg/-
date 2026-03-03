@@ -128,6 +128,41 @@ export default function Admin() {
     }
   };
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1000; // Reduced for Netlify 6MB limit
+          const MAX_HEIGHT = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality JPEG
+        };
+      };
+    });
+  };
+
   const handleUpdateResume = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isSaving) return;
@@ -142,9 +177,15 @@ export default function Admin() {
       if (res.ok) {
         alert("이력서 URL이 업데이트되었습니다.");
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("[ADMIN] Resume update failed:", errorData);
-        alert(`업데이트에 실패했습니다: ${errorData.error || "알 수 없는 오류"}`);
+        let errorMessage = "알 수 없는 오류";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `서버 오류 (${res.status}: ${res.statusText})`;
+        }
+        console.error("[ADMIN] Resume update failed:", errorMessage);
+        alert(`업데이트에 실패했습니다: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Resume update error:", error);
@@ -169,8 +210,14 @@ export default function Admin() {
       if (res.ok) {
         alert("모든 사이트 텍스트가 업데이트되었습니다.");
       } else {
-        const data = await res.json();
-        alert(`저장에 실패했습니다: ${data.error || "알 수 없는 오류"}`);
+        let errorMessage = "알 수 없는 오류";
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch (e) {
+          errorMessage = `서버 오류 (${res.status}: ${res.statusText})`;
+        }
+        alert(`저장에 실패했습니다: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Save error:", error);
@@ -204,9 +251,15 @@ export default function Admin() {
         await fetchProjects();
         alert("프로젝트가 성공적으로 저장되었습니다.");
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("[ADMIN] Project save failed:", errorData);
-        alert(`저장에 실패했습니다: ${errorData.error || "알 수 없는 오류"}`);
+        let errorMessage = "알 수 없는 오류";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `서버 오류 (${res.status}: ${res.statusText})`;
+        }
+        console.error("[ADMIN] Project save failed:", errorMessage);
+        alert(`저장에 실패했습니다: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Project save error:", error);
@@ -941,14 +994,21 @@ export default function Admin() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setEditingProject({ ...editingProject, thumbnail: reader.result as string });
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const compressed = await compressImage(file);
+                          setEditingProject({ ...editingProject, thumbnail: compressed });
+                        } catch (err) {
+                          console.error("Image compression failed:", err);
+                          // Fallback to original if compression fails
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setEditingProject({ ...editingProject, thumbnail: reader.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
                       }
                     }}
                     className="flex-grow text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
