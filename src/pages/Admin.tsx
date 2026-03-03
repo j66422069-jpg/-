@@ -59,27 +59,48 @@ export default function Admin() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch(`/api/projects?t=${Date.now()}`);
+      const res = await fetch(`/api/projects?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Pragma": "no-cache" }
+      });
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
       const data = await res.json();
       setProjects(data);
+      console.log("[ADMIN] Projects refetched:", data.length);
     } catch (error) {
       console.error("[ADMIN] Fetch projects error:", error);
+      throw error;
     }
   };
 
   const fetchResumeUrl = async () => {
-    const res = await fetch(`/api/settings/resume_url?t=${Date.now()}`);
-    const data = await res.json();
-    setResumeUrl(data.value);
+    try {
+      const res = await fetch(`/api/settings/resume_url?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Pragma": "no-cache" }
+      });
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      const data = await res.json();
+      setResumeUrl(data.value);
+    } catch (error) {
+      console.error("[ADMIN] Fetch resume error:", error);
+      throw error;
+    }
   };
 
   const fetchSiteContent = async () => {
     try {
-      const res = await fetch(`/api/settings?t=${Date.now()}`);
+      const res = await fetch(`/api/settings?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Pragma": "no-cache" }
+      });
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
       const data = await res.json();
       setSiteContent(prev => ({ ...prev, ...data }));
+      console.log("[ADMIN] Site content refetched");
     } catch (error) {
       console.error("Fetch site content error:", error);
+      throw error;
     }
   };
 
@@ -172,10 +193,12 @@ export default function Admin() {
       const res = await fetch("/api/settings/resume_url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({ password, value: resumeUrl }),
       });
       if (res.ok) {
-        alert("이력서 URL이 업데이트되었습니다.");
+        await fetchResumeUrl();
+        alert("이력서 URL이 성공적으로 업데이트되었습니다.");
       } else {
         let errorMessage = "알 수 없는 오류";
         try {
@@ -204,11 +227,13 @@ export default function Admin() {
       const res = await fetch("/api/settings/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({ password, settings: siteContent }),
       });
       
       if (res.ok) {
-        alert("모든 사이트 텍스트가 업데이트되었습니다.");
+        await fetchSiteContent();
+        alert("모든 사이트 텍스트가 성공적으로 저장되었습니다.");
       } else {
         let errorMessage = "알 수 없는 오류";
         try {
@@ -242,13 +267,15 @@ export default function Admin() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({ ...editingProject, password }),
       });
 
       if (res.ok) {
-        console.log("[ADMIN] Project saved successfully");
-        setEditingProject(null);
+        console.log("[ADMIN] Project saved successfully on server");
+        // Wait for refetch to complete before closing and alerting
         await fetchProjects();
+        setEditingProject(null);
         alert("프로젝트가 성공적으로 저장되었습니다.");
       } else {
         let errorMessage = "알 수 없는 오류";

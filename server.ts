@@ -13,13 +13,15 @@ const isProd = process.env.NODE_ENV === "production";
 console.log(`[SERVER] Starting in ${isProd ? 'production' : 'development'} mode`);
 console.log(`[SERVER] Database path: ${path.join(__dirname, "portfolio.db")}`);
 
-const db = new Database("portfolio.db");
+const db = new Database(path.join(__dirname, "portfolio.db"));
 
 // Check if database is writable
 try {
+  db.exec("PRAGMA journal_mode = DELETE"); // Use standard delete mode for better persistence in some environments
+  db.exec("PRAGMA synchronous = FULL");
   db.exec("CREATE TABLE IF NOT EXISTS _write_test (id INTEGER PRIMARY KEY)");
   db.exec("DROP TABLE _write_test");
-  console.log("[SERVER] Database is writable");
+  console.log("[SERVER] Database is writable and persistence is configured");
 } catch (e) {
   console.error("[SERVER] Database is NOT writable. Persistence will fail on this platform.", e);
 }
@@ -193,6 +195,14 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+  // Disable caching for all API routes
+  app.use("/api", (req, res, next) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    next();
+  });
+
   // API Routes
   app.get("/api/projects", (req, res) => {
     const projects = db.prepare("SELECT * FROM projects ORDER BY year DESC, created_at DESC").all();
@@ -257,6 +267,8 @@ async function startServer() {
       );
 
       console.log(`[POST] Project created successfully with ID: ${result.lastInsertRowid}`);
+      const count = db.prepare("SELECT COUNT(*) as count FROM projects").get() as { count: number };
+      console.log(`[POST] Total projects in DB now: ${count.count}`);
       res.json({ id: result.lastInsertRowid });
     } catch (error) {
       console.error("[POST] Project creation error:", error);
@@ -312,6 +324,8 @@ async function startServer() {
       }
 
       console.log(`[PUT] Project ${numericId} updated successfully`);
+      const updated = db.prepare("SELECT title FROM projects WHERE id = ?").get(numericId) as { title: string };
+      console.log(`[PUT] Verified title in DB: ${updated.title}`);
       res.json({ success: true });
     } catch (error) {
       console.error(`[PUT] Project update error for ID ${req.params.id}:`, error);

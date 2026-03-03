@@ -9,12 +9,13 @@ export default function Footer() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings/contact_email")
+    const t = Date.now();
+    fetch(`/api/settings/contact_email?t=${t}`)
       .then(res => res.json())
       .then(data => {
         if (data.value) setLinks(prev => ({ ...prev, email: data.value }));
       });
-    fetch("/api/settings/contact_instagram_url")
+    fetch(`/api/settings/contact_instagram_url?t=${t}`)
       .then(res => res.json())
       .then(data => {
         if (data.value) setLinks(prev => ({ ...prev, instagram_url: data.value }));

@@ -7,11 +7,12 @@ export default function ProjectList() {
   const [projectLabel, setProjectLabel] = useState("PROJECTS");
 
   useEffect(() => {
-    fetch("/api/projects")
+    const t = Date.now();
+    fetch(`/api/projects?t=${t}`)
       .then((res) => res.json())
       .then((data) => setProjects(data));
 
-    fetch("/api/settings/menu_project_label")
+    fetch(`/api/settings/menu_project_label?t=${t}`)
       .then(res => res.json())
       .then(data => {
         if (data.value) setProjectLabel(data.value.toUpperCase());

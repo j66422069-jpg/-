@@ -9,9 +9,10 @@ export default function Equipment() {
   });
 
   useEffect(() => {
+    const t = Date.now();
     const keys = ["equipment_page_title", "equipment_page_subtitle", "equipment_desc", "equipment_list"];
     keys.forEach(key => {
-      fetch(`/api/settings/${key}`)
+      fetch(`/api/settings/${key}?t=${t}`)
         .then(res => res.json())
         .then(data => {
           if (data.value) {
