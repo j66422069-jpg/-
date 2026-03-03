@@ -211,63 +211,97 @@ async function startServer() {
   });
 
   app.post("/api/projects", (req, res) => {
-    const { password, ...project } = req.body;
-    if (password !== "0901") return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { password, ...project } = req.body;
+      console.log(`[POST] Creating new project: ${project.title}`);
+      
+      if (password !== "0901") {
+        console.warn("[POST] Unauthorized project creation attempt");
+        return res.status(401).json({ error: "비밀번호가 올바르지 않습니다." });
+      }
 
-    const stmt = db.prepare(`
-      INSERT INTO projects (title, type, year, thumbnail, description, intent, technical, environment, role, video_urls, images, equipment, is_featured)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+      const stmt = db.prepare(`
+        INSERT INTO projects (title, type, year, thumbnail, description, intent, technical, environment, role, video_urls, images, equipment, is_featured)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
-    const result = stmt.run(
-      project.title,
-      project.type,
-      project.year,
-      project.thumbnail,
-      project.description,
-      project.intent,
-      project.technical,
-      project.environment,
-      project.role,
-      JSON.stringify(project.video_urls || []),
-      JSON.stringify(project.images || []),
-      JSON.stringify(project.equipment || {}),
-      project.is_featured ? 1 : 0
-    );
+      const result = stmt.run(
+        project.title,
+        project.type,
+        project.year,
+        project.thumbnail,
+        project.description,
+        project.intent,
+        project.technical,
+        project.environment,
+        project.role,
+        JSON.stringify(project.video_urls || []),
+        JSON.stringify(project.images || []),
+        JSON.stringify(project.equipment || {}),
+        project.is_featured ? 1 : 0
+      );
 
-    res.json({ id: result.lastInsertRowid });
+      console.log(`[POST] Project created successfully with ID: ${result.lastInsertRowid}`);
+      res.json({ id: result.lastInsertRowid });
+    } catch (error) {
+      console.error("[POST] Project creation error:", error);
+      res.status(500).json({ error: "프로젝트 생성 중 서버 오류가 발생했습니다." });
+    }
   });
 
   app.put("/api/projects/:id", (req, res) => {
-    const { password, ...project } = req.body;
-    if (password !== "0901") return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { password, ...project } = req.body;
+      const { id } = req.params;
+      const numericId = Number(id);
+      
+      console.log(`[PUT] Updating project ID: ${id} (${project.title})`);
+      
+      if (password !== "0901") {
+        console.warn(`[PUT] Unauthorized update attempt for project ${id}`);
+        return res.status(401).json({ error: "비밀번호가 올바르지 않습니다." });
+      }
 
-    const stmt = db.prepare(`
-      UPDATE projects SET 
-        title = ?, type = ?, year = ?, thumbnail = ?, description = ?, 
-        intent = ?, technical = ?, environment = ?, role = ?, 
-        video_urls = ?, images = ?, equipment = ?, is_featured = ?
-      WHERE id = ?
-    `);
+      if (isNaN(numericId)) {
+        return res.status(400).json({ error: "유효하지 않은 프로젝트 ID입니다." });
+      }
 
-    stmt.run(
-      project.title,
-      project.type,
-      project.year,
-      project.thumbnail,
-      project.description,
-      project.intent,
-      project.technical,
-      project.environment,
-      project.role,
-      JSON.stringify(project.video_urls || []),
-      JSON.stringify(project.images || []),
-      JSON.stringify(project.equipment || {}),
-      project.is_featured ? 1 : 0,
-      req.params.id
-    );
+      const stmt = db.prepare(`
+        UPDATE projects SET 
+          title = ?, type = ?, year = ?, thumbnail = ?, description = ?, 
+          intent = ?, technical = ?, environment = ?, role = ?, 
+          video_urls = ?, images = ?, equipment = ?, is_featured = ?
+        WHERE id = ?
+      `);
 
-    res.json({ success: true });
+      const result = stmt.run(
+        project.title,
+        project.type,
+        project.year,
+        project.thumbnail,
+        project.description,
+        project.intent,
+        project.technical,
+        project.environment,
+        project.role,
+        JSON.stringify(project.video_urls || []),
+        JSON.stringify(project.images || []),
+        JSON.stringify(project.equipment || {}),
+        project.is_featured ? 1 : 0,
+        numericId
+      );
+
+      if (result.changes === 0) {
+        console.warn(`[PUT] No project found to update with ID ${numericId}`);
+        return res.status(404).json({ error: "업데이트할 프로젝트를 찾을 수 없습니다." });
+      }
+
+      console.log(`[PUT] Project ${numericId} updated successfully`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error(`[PUT] Project update error for ID ${req.params.id}:`, error);
+      res.status(500).json({ error: "프로젝트 업데이트 중 서버 오류가 발생했습니다." });
+    }
   });
 
   app.delete("/api/projects/:id", (req, res) => {
@@ -316,31 +350,49 @@ async function startServer() {
   });
 
   app.post("/api/settings/bulk", (req, res) => {
-    const { password, settings } = req.body;
-    if (password !== "0901") return res.status(401).json({ error: "Unauthorized" });
-
-    const stmt = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
-    const transaction = db.transaction((settingsObj) => {
-      for (const [key, value] of Object.entries(settingsObj)) {
-        stmt.run(key, value);
-      }
-    });
-
     try {
+      const { password, settings } = req.body;
+      console.log("[POST] Bulk settings update request");
+      
+      if (password !== "0901") {
+        console.warn("[POST] Unauthorized bulk settings update attempt");
+        return res.status(401).json({ error: "비밀번호가 올바르지 않습니다." });
+      }
+
+      const stmt = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
+      const transaction = db.transaction((settingsObj) => {
+        for (const [key, value] of Object.entries(settingsObj)) {
+          stmt.run(key, value);
+        }
+      });
+
       transaction(settings);
+      console.log("[POST] Bulk settings updated successfully");
       res.json({ success: true });
     } catch (error) {
-      console.error("Bulk settings update error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error("[POST] Bulk settings update error:", error);
+      res.status(500).json({ error: "설정 저장 중 서버 오류가 발생했습니다." });
     }
   });
 
   app.post("/api/settings/:key", (req, res) => {
-    const { password, value } = req.body;
-    if (password !== "0901") return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { password, value } = req.body;
+      const { key } = req.params;
+      console.log(`[POST] Updating setting: ${key}`);
+      
+      if (password !== "0901") {
+        console.warn(`[POST] Unauthorized setting update attempt for ${key}`);
+        return res.status(401).json({ error: "비밀번호가 올바르지 않습니다." });
+      }
 
-    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(req.params.key, value);
-    res.json({ success: true });
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
+      console.log(`[POST] Setting ${key} updated successfully`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error(`[POST] Setting update error for ${req.params.key}:`, error);
+      res.status(500).json({ error: "설정 업데이트 중 서버 오류가 발생했습니다." });
+    }
   });
 
   // Vite middleware for development

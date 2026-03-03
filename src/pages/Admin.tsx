@@ -142,11 +142,13 @@ export default function Admin() {
       if (res.ok) {
         alert("이력서 URL이 업데이트되었습니다.");
       } else {
-        alert("업데이트에 실패했습니다.");
+        const errorData = await res.json().catch(() => ({}));
+        console.error("[ADMIN] Resume update failed:", errorData);
+        alert(`업데이트에 실패했습니다: ${errorData.error || "알 수 없는 오류"}`);
       }
     } catch (error) {
       console.error("Resume update error:", error);
-      alert("업데이트 중 오류가 발생했습니다.");
+      alert("업데이트 중 서버와 통신하는 동안 오류가 발생했습니다.");
     } finally {
       setIsSaving(false);
     }
@@ -184,8 +186,11 @@ export default function Admin() {
 
     setIsSaving(true);
     try {
-      const method = editingProject?.id ? "PUT" : "POST";
-      const url = editingProject?.id ? `/api/projects/${editingProject.id}` : "/api/projects";
+      const isUpdate = !!editingProject?.id;
+      const method = isUpdate ? "PUT" : "POST";
+      const url = isUpdate ? `/api/projects/${editingProject.id}` : "/api/projects";
+
+      console.log(`[ADMIN] ${isUpdate ? 'Updating' : 'Creating'} project...`);
 
       const res = await fetch(url, {
         method,
@@ -194,14 +199,18 @@ export default function Admin() {
       });
 
       if (res.ok) {
+        console.log("[ADMIN] Project saved successfully");
         setEditingProject(null);
-        fetchProjects();
+        await fetchProjects();
+        alert("프로젝트가 성공적으로 저장되었습니다.");
       } else {
-        alert("저장에 실패했습니다.");
+        const errorData = await res.json().catch(() => ({}));
+        console.error("[ADMIN] Project save failed:", errorData);
+        alert(`저장에 실패했습니다: ${errorData.error || "알 수 없는 오류"}`);
       }
     } catch (error) {
       console.error("Project save error:", error);
-      alert("저장 중 오류가 발생했습니다.");
+      alert("저장 중 서버와 통신하는 동안 오류가 발생했습니다.");
     } finally {
       setIsSaving(false);
     }
