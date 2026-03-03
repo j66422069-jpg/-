@@ -4,8 +4,9 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/server/:splat"
+  to = "https://ais-dev-gclbci65rben43vqbxvfve-135154747457.asia-northeast1.run.app/api/:splat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
