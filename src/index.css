@@ -1,0 +1,32 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --color-deep-gray: #1a1a1a;
+  --color-light-gray: #f5f5f5;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-white text-deep-gray antialiased;
+  }
+}
+
+.markdown-body {
+  @apply text-sm leading-relaxed;
+}
+
+.markdown-body p {
+  @apply mb-4;
+}
+
+.aspect-video-container {
+  @apply relative w-full overflow-hidden bg-gray-100;
+  padding-top: 56.25%;
+}
+
+.aspect-video-container iframe {
+  @apply absolute top-0 left-0 w-full h-full;
+}
+
