@@ -58,9 +58,13 @@ export default function Admin() {
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchProjects = async () => {
-    const res = await fetch("/api/projects");
-    const data = await res.json();
-    setProjects(data);
+    try {
+      const res = await fetch(`/api/projects?t=${Date.now()}`);
+      const data = await res.json();
+      setProjects(data);
+    } catch (error) {
+      console.error("[ADMIN] Fetch projects error:", error);
+    }
   };
 
   const fetchResumeUrl = async () => {
@@ -70,14 +74,13 @@ export default function Admin() {
   };
 
   const fetchSiteContent = async () => {
-    const keys = Object.keys(siteContent);
-    const newContent = { ...siteContent };
-    for (const key of keys) {
-      const res = await fetch(`/api/settings/${key}?t=${Date.now()}`);
+    try {
+      const res = await fetch(`/api/settings?t=${Date.now()}`);
       const data = await res.json();
-      (newContent as any)[key] = data.value;
+      setSiteContent(prev => ({ ...prev, ...data }));
+    } catch (error) {
+      console.error("Fetch site content error:", error);
     }
-    setSiteContent(newContent);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -91,13 +94,38 @@ export default function Admin() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("정말 삭제하시겠습니까?")) return;
-    const res = await fetch(`/api/projects/${id}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) fetchProjects();
+    if (id === undefined || id === null) {
+      console.error("[ADMIN] Cannot delete project: ID is missing");
+      alert("프로젝트 ID가 유효하지 않습니다.");
+      return;
+    }
+
+    console.log(`[ADMIN] Deleting project with ID: ${id}`);
+    if (!confirm(`정말 삭제하시겠습니까? (ID: ${id})`)) return;
+
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-password": password 
+        }
+      });
+
+      console.log(`[ADMIN] Delete response status: ${res.status}`);
+
+      if (res.ok) {
+        alert("프로젝트가 삭제되었습니다.");
+        fetchProjects();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error(`[ADMIN] Delete failed:`, errorData);
+        alert(`삭제에 실패했습니다: ${errorData.error || "알 수 없는 오류"}`);
+      }
+    } catch (error) {
+      console.error("[ADMIN] Delete error:", error);
+      alert("삭제 중 서버와 통신하는 동안 오류가 발생했습니다.");
+    }
   };
 
   const handleUpdateResume = async (e: React.FormEvent) => {
@@ -124,30 +152,24 @@ export default function Admin() {
     }
   };
 
-  const handleUpdateContent = async (key: string, value: string) => {
-    const res = await fetch(`/api/settings/${key}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, value }),
-    });
-    if (!res.ok) {
-      alert(`${key} 업데이트에 실패했습니다.`);
-    }
-  };
-
   const handleSaveAllContent = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isSaving) return;
 
     setIsSaving(true);
     try {
-      const keys = Object.keys(siteContent);
-      // Execute updates sequentially to avoid potential race conditions or server overload,
-      // but ensure we wait for all of them.
-      for (const key of keys) {
-        await handleUpdateContent(key, (siteContent as any)[key]);
+      const res = await fetch("/api/settings/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, settings: siteContent }),
+      });
+      
+      if (res.ok) {
+        alert("모든 사이트 텍스트가 업데이트되었습니다.");
+      } else {
+        const data = await res.json();
+        alert(`저장에 실패했습니다: ${data.error || "알 수 없는 오류"}`);
       }
-      alert("모든 사이트 텍스트가 업데이트되었습니다.");
     } catch (error) {
       console.error("Save error:", error);
       alert("저장 중 오류가 발생했습니다.");
@@ -808,6 +830,23 @@ export default function Admin() {
           </div>
         </form>
       </section>
+
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">프로젝트 목록</h2>
+        <button
+          onClick={() => setEditingProject({
+            title: "", type: "", year: new Date().getFullYear().toString(),
+            thumbnail: "", description: "", intent: "", technical: "",
+            environment: "", role: "", video_urls: [], images: [],
+            equipment: { camera: "", lens: "", lighting: "", color: "" },
+            is_featured: false
+          })}
+          className="p-2 bg-black text-white hover:bg-gray-800 transition-colors"
+          title="새 프로젝트 추가"
+        >
+          <Plus size={20} />
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 gap-4">
         {projects.map((project) => (

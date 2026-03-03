@@ -271,16 +271,68 @@ async function startServer() {
   });
 
   app.delete("/api/projects/:id", (req, res) => {
-    const { password } = req.body;
-    if (password !== "0901") return res.status(401).json({ error: "Unauthorized" });
+    const password = req.headers['x-password'];
+    const { id } = req.params;
+    const numericId = Number(id);
+    
+    console.log(`[DELETE] Request received for project ID: ${id} (numeric: ${numericId})`);
+    console.log(`[DELETE] Password provided in header: ${password ? "****" : "MISSING"}`);
+    
+    if (password !== "0901") {
+      console.warn(`[DELETE] Unauthorized attempt for project ${id}`);
+      return res.status(401).json({ error: "비밀번호가 올바르지 않습니다. (Unauthorized)" });
+    }
 
-    db.prepare("DELETE FROM projects WHERE id = ?").run(req.params.id);
-    res.json({ success: true });
+    if (isNaN(numericId)) {
+      console.error(`[DELETE] Invalid ID format: ${id}`);
+      return res.status(400).json({ error: "유효하지 않은 프로젝트 ID입니다." });
+    }
+
+    try {
+      const result = db.prepare("DELETE FROM projects WHERE id = ?").run(numericId);
+      console.log(`[DELETE] DB Result for project ${numericId}:`, result);
+      
+      if (result.changes === 0) {
+        console.warn(`[DELETE] No project found with ID ${numericId}`);
+        return res.status(404).json({ error: "삭제할 프로젝트를 찾을 수 없습니다." });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error(`[DELETE] Database error for project ${numericId}:`, error);
+      res.status(500).json({ error: "데이터베이스 삭제 중 오류가 발생했습니다." });
+    }
+  });
+
+  app.get("/api/settings", (req, res) => {
+    const settings = db.prepare("SELECT key, value FROM settings").all() as { key: string, value: string }[];
+    const settingsObj = settings.reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {});
+    res.json(settingsObj);
   });
 
   app.get("/api/settings/:key", (req, res) => {
     const setting = db.prepare("SELECT value FROM settings WHERE key = ?").get(req.params.key) as { value: string } | undefined;
     res.json({ value: setting?.value || "" });
+  });
+
+  app.post("/api/settings/bulk", (req, res) => {
+    const { password, settings } = req.body;
+    if (password !== "0901") return res.status(401).json({ error: "Unauthorized" });
+
+    const stmt = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
+    const transaction = db.transaction((settingsObj) => {
+      for (const [key, value] of Object.entries(settingsObj)) {
+        stmt.run(key, value);
+      }
+    });
+
+    try {
+      transaction(settings);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Bulk settings update error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   app.post("/api/settings/:key", (req, res) => {
