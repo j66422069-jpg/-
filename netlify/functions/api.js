@@ -5,18 +5,19 @@ exports.handler = async (event, context) => {
   
   let apiPath = event.path;
   
-  // Handle Netlify function path prefix
+  // Handle Netlify function path prefix if called directly or via some redirect patterns
   if (apiPath.includes("/.netlify/functions/api")) {
     apiPath = apiPath.replace("/.netlify/functions/api", "");
   }
   
-  // Ensure the path starts with /api
+  // Ensure the path starts with /api for the backend
   if (!apiPath.startsWith("/api")) {
     apiPath = "/api" + (apiPath.startsWith("/") ? apiPath : "/" + apiPath);
   }
 
-  // Clean up double slashes
+  // Clean up double slashes and ensure it's a valid path
   apiPath = apiPath.replace(/\/+/g, "/");
+  if (apiPath === "/api") apiPath = "/api/";
 
   const url = `${API_BASE_URL}${apiPath}${event.queryStringParameters && Object.keys(event.queryStringParameters).length > 0 ? '?' + new URLSearchParams(event.queryStringParameters).toString() : ''}`;
 
