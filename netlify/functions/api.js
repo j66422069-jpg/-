@@ -4,13 +4,19 @@ exports.handler = async (event, context) => {
   const API_BASE_URL = process.env.API_BASE_URL || "https://ais-pre-gclbci65rben43vqbxvfve-135154747457.asia-northeast1.run.app";
   
   let apiPath = event.path;
+  
+  // Handle Netlify function path prefix
   if (apiPath.includes("/.netlify/functions/api")) {
     apiPath = apiPath.replace("/.netlify/functions/api", "");
   }
   
+  // Ensure the path starts with /api
   if (!apiPath.startsWith("/api")) {
     apiPath = "/api" + (apiPath.startsWith("/") ? apiPath : "/" + apiPath);
   }
+
+  // Clean up double slashes
+  apiPath = apiPath.replace(/\/+/g, "/");
 
   const url = `${API_BASE_URL}${apiPath}${event.queryStringParameters && Object.keys(event.queryStringParameters).length > 0 ? '?' + new URLSearchParams(event.queryStringParameters).toString() : ''}`;
 
