@@ -1,17 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminPassword = process.env.ADMIN_PASSWORD || "0901";
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+let supabaseInstance = null;
+const getSupabase = () => {
+  if (supabaseInstance) return supabaseInstance;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Missing Supabase environment variables");
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
+};
 
 export const handler = async (event, context) => {
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, x-password",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers, body: "" };
+  }
+
   const pathParts = event.path.split('/').filter(Boolean);
   const lastPart = pathParts[pathParts.length - 1];
   const id = (lastPart !== 'projects') ? lastPart : null;
 
   try {
+    const supabase = getSupabase();
     // GET /api/projects
     if (event.httpMethod === "GET") {
       if (id) {
@@ -23,7 +41,7 @@ export const handler = async (event, context) => {
         if (error) throw error;
         return {
           statusCode: 200,
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(data),
         };
       } else {
@@ -35,7 +53,7 @@ export const handler = async (event, context) => {
         if (error) throw error;
         return {
           statusCode: 200,
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(data),
         };
       }
@@ -49,7 +67,7 @@ export const handler = async (event, context) => {
       if (password !== adminPassword && event.headers['x-password'] !== adminPassword) {
         return {
           statusCode: 401,
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ error: "비밀번호가 올바르지 않습니다." }),
         };
       }
@@ -80,7 +98,7 @@ export const handler = async (event, context) => {
 
       return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ success: true, id: result.data?.[0]?.id }),
       };
     }
@@ -91,13 +109,13 @@ export const handler = async (event, context) => {
       if (password !== adminPassword) {
         return {
           statusCode: 401,
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ error: "비밀번호가 올바르지 않습니다." }),
         };
       }
 
       if (!id) {
-        return { statusCode: 400, body: "Missing project ID" };
+        return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing project ID" }) };
       }
 
       const { error } = await supabase
@@ -109,17 +127,17 @@ export const handler = async (event, context) => {
 
       return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ success: true }),
       };
     }
 
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method Not Allowed" }) };
   } catch (error) {
     console.error("Projects function error:", error);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ error: error.message || "프로젝트 처리 중 오류가 발생했습니다." }),
     };
   }

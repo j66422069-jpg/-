@@ -1,12 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+let supabaseInstance = null;
+const getSupabase = () => {
+  if (supabaseInstance) return supabaseInstance;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Missing Supabase environment variables");
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
+};
 
 export const handler = async (event, context) => {
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, x-password",
+    "Access-Control-Allow-Methods": "GET, OPTIONS"
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers, body: "" };
+  }
+
   try {
+    const supabase = getSupabase();
     const pathParts = event.path.split('/').filter(Boolean);
     const lastPart = pathParts[pathParts.length - 1];
     const key = (lastPart !== 'settings') ? lastPart : null;
@@ -22,7 +39,7 @@ export const handler = async (event, context) => {
 
       return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ value: data?.value || "" }),
       };
     } else {
@@ -48,7 +65,7 @@ export const handler = async (event, context) => {
 
       return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(settingsObj),
       };
     }
@@ -56,8 +73,8 @@ export const handler = async (event, context) => {
     console.error("Settings fetch error:", error);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "설정을 불러오는 중 오류가 발생했습니다." }),
+      headers,
+      body: JSON.stringify({ error: `설정을 불러오는 중 오류가 발생했습니다: ${error.message}` }),
     };
   }
 };
