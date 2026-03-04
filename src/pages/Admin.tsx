@@ -235,13 +235,15 @@ export default function Admin() {
         await fetchSiteContent();
         alert("모든 사이트 텍스트가 성공적으로 저장되었습니다.");
       } else {
-        let errorMessage = "알 수 없는 오류";
+        const errorText = await res.text();
+        let errorMessage = `서버 오류 (${res.status})`;
         try {
-          const data = await res.json();
+          const data = JSON.parse(errorText);
           errorMessage = data.error || errorMessage;
         } catch (e) {
-          errorMessage = `서버 오류 (${res.status}: ${res.statusText})`;
+          errorMessage = errorText || errorMessage;
         }
+        console.error("[ADMIN] Save bulk settings failed:", errorMessage);
         alert(`저장에 실패했습니다: ${errorMessage}`);
       }
     } catch (error) {
@@ -273,17 +275,17 @@ export default function Admin() {
 
       if (res.ok) {
         console.log("[ADMIN] Project saved successfully on server");
-        // Wait for refetch to complete before closing and alerting
         await fetchProjects();
         setEditingProject(null);
         alert("프로젝트가 성공적으로 저장되었습니다.");
       } else {
-        let errorMessage = "알 수 없는 오류";
+        const errorText = await res.text();
+        let errorMessage = `서버 오류 (${res.status})`;
         try {
-          const errorData = await res.json();
+          const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          errorMessage = `서버 오류 (${res.status}: ${res.statusText})`;
+          errorMessage = errorText || errorMessage;
         }
         console.error("[ADMIN] Project save failed:", errorMessage);
         alert(`저장에 실패했습니다: ${errorMessage}`);

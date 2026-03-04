@@ -1,14 +1,27 @@
 import { Handler } from "@netlify/functions";
 
 export const handler: Handler = async (event, context) => {
+  console.log(`[FUNCTION START] Method: ${event.httpMethod}, Path: ${event.path}`);
+  
   // Use the Shared App URL as the base for the proxy target
-  // This URL is public and persistent compared to the dev URL
   const API_BASE_URL = process.env.API_BASE_URL || "https://ais-pre-gclbci65rben43vqbxvfve-135154747457.asia-northeast1.run.app";
   
-  const path = event.path.replace("/api", "");
-  const url = `${API_BASE_URL}/api${path}${event.queryStringParameters ? '?' + new URLSearchParams(event.queryStringParameters as any).toString() : ''}`;
+  // Netlify redirects might pass the path differently. 
+  // We want to ensure we get the part after /api
+  let apiPath = event.path;
+  if (apiPath.includes("/.netlify/functions/api")) {
+    // If called directly or via some internal redirect that appends the function name
+    apiPath = apiPath.replace("/.netlify/functions/api", "");
+  }
+  
+  // Ensure it starts with /api if it doesn't
+  if (!apiPath.startsWith("/api")) {
+    apiPath = "/api" + (apiPath.startsWith("/") ? apiPath : "/" + apiPath);
+  }
 
-  console.log(`[PROXY] ${event.httpMethod} ${url}`);
+  const url = `${API_BASE_URL}${apiPath}${event.queryStringParameters && Object.keys(event.queryStringParameters).length > 0 ? '?' + new URLSearchParams(event.queryStringParameters as any).toString() : ''}`;
+
+  console.log(`[PROXY TARGET] ${url}`);
 
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -23,13 +36,20 @@ export const handler: Handler = async (event, context) => {
   }
 
   try {
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(event.headers)) {
+      if (value && !['host', 'connection', 'content-length'].includes(key.toLowerCase())) {
+        headers.set(key, value);
+      }
+    }
+    headers.set("host", new URL(API_BASE_URL).host);
+
+    const body = event.isBase64Encoded ? Buffer.from(event.body || "", "base64") : event.body;
+
     const response = await fetch(url, {
       method: event.httpMethod,
-      headers: {
-        ...event.headers,
-        "host": new URL(API_BASE_URL).host,
-      } as any,
-      body: event.body,
+      headers: headers,
+      body: event.httpMethod !== "GET" && event.httpMethod !== "HEAD" ? body : undefined,
     });
 
     const data = await response.text();
