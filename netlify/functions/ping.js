@@ -1,7 +1,7 @@
-exports.handler = async () => {
+export const handler = async (event, context) => {
   return {
     statusCode: 200,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ok: true })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ok: true, message: "Netlify Functions are active" }),
   };
 };
