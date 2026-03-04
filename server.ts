@@ -88,6 +88,7 @@ if (!resumeExists) {
     ])],
     ['equipment_desc', '작품의 톤과 매너에 가장 적합한 장비를 선택하여 최상의 결과물을 만들어냅니다. Sony Alpha 시스템 기반의 S-Log3 / S-Cinetone 운용에 능숙합니다.'],
     ['contact_intro', '프로젝트 제안이나 협업 문의는 아래 연락처로 부탁드립니다. 보통 24시간 이내에 답변을 드립니다.'],
+    ['contact_page_title', 'CONTACT'],
     ['contact_email', 'j66422069@gmail.com'],
     ['contact_phone', '010-1234-5678'],
     ['contact_instagram', '@sungmin_cinematography'],
@@ -214,7 +215,8 @@ async function startServer() {
       ...p,
       video_urls: JSON.parse(p.video_urls || "[]"),
       images: JSON.parse(p.images || "[]"),
-      equipment: JSON.parse(p.equipment || "{}")
+      equipment: JSON.parse(p.equipment || "{}"),
+      is_featured: !!p.is_featured
     })));
   });
 
@@ -224,18 +226,20 @@ async function startServer() {
       ...p,
       video_urls: JSON.parse(p.video_urls || "[]"),
       images: JSON.parse(p.images || "[]"),
-      equipment: JSON.parse(p.equipment || "{}")
+      equipment: JSON.parse(p.equipment || "{}"),
+      is_featured: !!p.is_featured
     })));
   });
 
   app.get("/api/projects/:id", (req, res) => {
-    const project = db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    const project = db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id) as any;
     if (!project) return res.status(404).json({ error: "Project not found" });
     res.json({
       ...project,
       video_urls: JSON.parse(project.video_urls || "[]"),
       images: JSON.parse(project.images || "[]"),
-      equipment: JSON.parse(project.equipment || "{}")
+      equipment: JSON.parse(project.equipment || "{}"),
+      is_featured: !!project.is_featured
     });
   });
 

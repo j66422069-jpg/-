@@ -4,7 +4,10 @@ import { Project } from "../types";
 
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectLabel, setProjectLabel] = useState("PROJECTS");
+  const [content, setContent] = useState({
+    project_title: "PROJECTS",
+    project_desc: "작업 목록"
+  });
 
   useEffect(() => {
     const t = Date.now();
@@ -12,18 +15,23 @@ export default function ProjectList() {
       .then((res) => res.json())
       .then((data) => setProjects(data));
 
-    fetch(`/api/settings/menu_project_label?t=${t}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.value) setProjectLabel(data.value.toUpperCase());
-      });
+    const keys = ["project_title", "project_desc"];
+    keys.forEach(key => {
+      fetch(`/api/settings/${key}?t=${t}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.value) {
+            setContent(prev => ({ ...prev, [key]: data.value }));
+          }
+        });
+    });
   }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
       <header className="mb-20">
-        <h1 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase mb-4">{projectLabel}</h1>
-        <h2 className="text-4xl font-bold tracking-tight">작업 목록</h2>
+        <h1 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase mb-4">{content.project_title}</h1>
+        <h2 className="text-4xl font-bold tracking-tight">{content.project_desc}</h2>
       </header>
 
       <div className="overflow-x-auto">

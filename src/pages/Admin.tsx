@@ -26,6 +26,7 @@ export default function Admin() {
     equipment_page_subtitle: "",
     equipment_list: "[]",
     contact_intro: "",
+    contact_page_title: "",
     contact_email: "",
     contact_phone: "",
     contact_instagram: "",
@@ -865,8 +866,17 @@ export default function Admin() {
           {activeTab === "CONTACT" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-400 uppercase">페이지 설명</label>
+                <label className="text-xs font-bold text-gray-400 uppercase">페이지 제목 (예: CONTACT)</label>
                 <input
+                  value={siteContent.contact_page_title}
+                  onChange={(e) => setSiteContent({ ...siteContent, contact_page_title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 focus:outline-none focus:border-black"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase">페이지 설명</label>
+                <textarea
+                  rows={3}
                   value={siteContent.contact_intro}
                   onChange={(e) => setSiteContent({ ...siteContent, contact_intro: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-200 focus:outline-none focus:border-black"

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 export default function Contact() {
   const [content, setContent] = useState({
+    contact_page_title: "CONTACT",
     contact_intro: "프로젝트 제안이나 협업 문의는 아래 연락처로 부탁드립니다.\n보통 24시간 이내에 답변을 드립니다.",
     contact_email: "j66422069@gmail.com",
     contact_phone: "010-1234-5678",
@@ -13,6 +14,7 @@ export default function Contact() {
 
   useEffect(() => {
     const keys = [
+      "contact_page_title",
       "contact_intro",
       "contact_email",
       "contact_phone",
@@ -34,7 +36,7 @@ export default function Contact() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
       <header className="mb-20">
-        <h1 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase mb-4">CONTACT</h1>
+        <h1 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase mb-4">{content.contact_page_title}</h1>
         <h2 className="text-4xl font-bold tracking-tight">함께 고민하고 설계하겠습니다.</h2>
       </header>
 

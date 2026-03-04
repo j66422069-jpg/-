@@ -1,20 +1,28 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Cinematographer Portfolio
 
-# Run and deploy your AI Studio app
+A professional portfolio website for Cinematographer Koo Sung-min.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/d2d9c302-bc00-4784-979f-d7a84651087e
+- **Dynamic Content**: Manage all text and projects via the Admin panel.
+- **Project Management**: Add, edit, and delete projects with multiple video links and images.
+- **Equipment List**: Categorized equipment management.
+- **Responsive Design**: Optimized for all devices with a minimalist, high-end aesthetic.
+- **Admin Panel**: Secure management of site content.
 
-## Run Locally
+## Admin Access
 
-**Prerequisites:**  Node.js
+- **URL**: `/admin`
+- **Password**: `0901`
 
+## Tech Stack
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Frontend**: React, Tailwind CSS, Lucide React, Framer Motion.
+- **Backend**: Node.js, Express.
+- **Database**: SQLite (better-sqlite3).
+- **Build Tool**: Vite.
+
+## Deployment Notes
+
+- The app is configured for full-stack execution in the AI Studio environment.
+- For deployment to Netlify, use the provided `netlify.toml` and functions. Note that the SQLite database requires a persistent backend; the Netlify functions currently act as a proxy to the main server.
